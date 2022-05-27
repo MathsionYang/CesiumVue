@@ -1,18 +1,33 @@
 <template>
   <div id="cesiumContainer">
-        <div id="latlng_show" style="width:420px;height:30px;position:absolute;bottom:40px;right:200px;z-index:1;font-size:15px;">
-        <div style="width:140px;height:30px;float:left;">
-            <font size="3" color="white">经度：<span id="longitude_show">{{Position.lat}}</span></font>
-        </div>
-        <div style="width:140px;height:30px;float:left;">
-            <font size="3" color="white">纬度：<span id="latitude_show">{{Position.log}}</span></font>
-        </div>
-        <div style="width:140px;height:30px;float:left;">
-            <font size="3" color="white">视角高：<span id="altitude_show">{{Position.alt}}</span>km</font>
-        </div>
+    <div
+      style="
+        width: 420px;
+        height: 30px;
+        position: absolute;
+        bottom: 40px;
+        right: 200px;
+        z-index: 1;
+        font-size: 15px;
+      "
+    >
+      <div style="width: 140px; height: 30px; float: left">
+        <font size="3" color="white"
+          >经度：<span>{{ Position.lat }}</span></font
+        >
+      </div>
+      <div style="width: 140px; height: 30px; float: left">
+        <font size="3" color="white"
+          >纬度：<span>{{ Position.log }}</span></font
+        >
+      </div>
+      <div style="width: 140px; height: 30px; float: left">
+        <font size="3" color="white"
+          >视角高：<span>{{ Position.alt }}</span
+          >km</font
+        >
+      </div>
     </div>
-
-
   </div>
 </template>
 
@@ -22,14 +37,14 @@ import * as Cesium from "cesium";
 
 export default {
   name: "Map",
-  data(){
+  data() {
     return {
-      Position:{
-        lat:"",
-        log:"",
-        alt:"",
-      }
-    }
+      Position: {
+        lat: "",
+        log: "",
+        alt: "",
+      },
+    };
   },
   mounted() {
     this.init();
@@ -61,8 +76,9 @@ export default {
         maximumLevel: 18,
       });
       imageryLayers.addImageryProvider(googleMap);
+      console.log(this.$viewer.camera.pickEllipsoid)
       this.configScene();
-      this.aa()
+      this.SetInputAction();
     },
     // 配置视窗
     configScene() {
@@ -91,27 +107,25 @@ export default {
       // Set the initial view
       this.$viewer.scene.camera.setView(homeCameraView);
     },
-    aa(){
-      var handler = new Cesium.ScreenSpaceEventHandler(this.$viewer.scene.canvas);
+    SetInputAction() {
+      let that = this;
+      console.log( that.$viewer)
+      var handler = new Cesium.ScreenSpaceEventHandler(
+        that.$viewer.scene.canvas
+      );
+      let viewer = that.$viewer;
       handler.setInputAction(function (movement) {
-    //捕获椭球体，将笛卡尔二维平面坐标转为椭球体的笛卡尔三维坐标，返回球体表面的点
-            var cartesian = viewer.camera.pickEllipsoid(movement.endPosition, ellipsoid);
-            if (cartesian) {
-                    //将笛卡尔三维坐标转为地图坐标（弧度）
-                    var cartographic = viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian);
-                    //将地图坐标（弧度）转为十进制的度数
-                    this.Position.lat = Cesium.Math.toDegrees(cartographic.latitude).toFixed(4);
-                    this.Position.log = Cesium.Math.toDegrees(cartographic.longitude).toFixed(4);
-                    this.Position.alt = (viewer.camera.positionCartographic.height / 1000).toFixed(2);
-                }
-            }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
-
-      console.log("2222",handler)
-
-    }
-
-
-
+          var cartesian = viewer.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid);
+          if (cartesian) {
+  //                 //将笛卡尔三维坐标转为地图坐标（弧度）
+                  var cartographic = viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian);
+                  // //将地图坐标（弧度）转为十进制的度数
+                  that.Position.lat = Cesium.Math.toDegrees(cartographic.latitude).toFixed(4);
+                  that.Position.log = Cesium.Math.toDegrees(cartographic.longitude).toFixed(4);
+                  that.Position.alt = (viewer.camera.positionCartographic.height / 1000).toFixed(2);
+              }
+          }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+    },
   },
 };
 </script>
