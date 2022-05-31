@@ -76,9 +76,9 @@ export default {
         maximumLevel: 18,
       });
       imageryLayers.addImageryProvider(googleMap);
-      console.log(this.$viewer.camera.pickEllipsoid)
       this.configScene();
       this.SetInputAction();
+      this.get3Dtiles();
     },
     // 配置视窗
     configScene() {
@@ -109,22 +109,92 @@ export default {
     },
     SetInputAction() {
       let that = this;
-      console.log( that.$viewer)
+      console.log(that.$viewer);
       var handler = new Cesium.ScreenSpaceEventHandler(
         that.$viewer.scene.canvas
       );
       let viewer = that.$viewer;
       handler.setInputAction(function (movement) {
-          var cartesian = viewer.camera.pickEllipsoid(movement.endPosition, viewer.scene.globe.ellipsoid);
-          if (cartesian) {
-  //                 //将笛卡尔三维坐标转为地图坐标（弧度）
-                  var cartographic = viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian);
-                  // //将地图坐标（弧度）转为十进制的度数
-                  that.Position.lat = Cesium.Math.toDegrees(cartographic.latitude).toFixed(4);
-                  that.Position.log = Cesium.Math.toDegrees(cartographic.longitude).toFixed(4);
-                  that.Position.alt = (viewer.camera.positionCartographic.height / 1000).toFixed(2);
-              }
-          }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+        var cartesian = viewer.camera.pickEllipsoid(
+          movement.endPosition,
+          viewer.scene.globe.ellipsoid
+        );
+        if (cartesian) {
+          //                 //将笛卡尔三维坐标转为地图坐标（弧度）
+          var cartographic =
+            viewer.scene.globe.ellipsoid.cartesianToCartographic(cartesian);
+          // //将地图坐标（弧度）转为十进制的度数
+          that.Position.lat = Cesium.Math.toDegrees(
+            cartographic.latitude
+          ).toFixed(4);
+          that.Position.log = Cesium.Math.toDegrees(
+            cartographic.longitude
+          ).toFixed(4);
+          that.Position.alt = (
+            viewer.camera.positionCartographic.height / 1000
+          ).toFixed(2);
+        }
+      }, Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+    },
+    get3Dtiles() {
+      let viewer = this.$viewer;
+
+      var tileset = viewer.scene.primitives.add(
+        new Cesium.Cesium3DTileset({
+          url: "http://221.229.121.123:8000/bee/open-63079029343256634/bim/pavementBim/tileset.json",
+        })
+      );
+      // console.log(tileset)
+      const transform = this.update3dtilesMaxtrix({
+        rx: 0,
+        ry: 0,
+        rz: -295,
+        ps: {
+          lat: 32.3340738,
+          lng: 119.620305,
+          alt: 0,
+        },
+      });
+      // viewer.scene.primitives.add(tileset);
+
+      tileset.readyPromise
+        .then(function (tileset) {
+          viewer.scene.primitives.add(tileset);
+                  tileset._root.transform = transform;
+          viewer.zoomTo(
+            tileset,
+            new Cesium.HeadingPitchRange(
+              0.5,
+              -0.2,
+              tileset.boundingSphere.radius * 1.0
+            )
+          );
+        })
+        .otherwise(function (error) {
+          console.log(error);
+        });
+    },
+    update3dtilesMaxtrix(options = {}) {
+      // const { Cesium } = QE;
+      const { rx, ry, rz, ps } = options;
+      const mx = Cesium.Matrix3.fromRotationX(Cesium.Math.toRadians(rx));
+      const my = Cesium.Matrix3.fromRotationY(Cesium.Math.toRadians(ry));
+      const mz = Cesium.Matrix3.fromRotationZ(Cesium.Math.toRadians(rz));
+      const rotationX = Cesium.Matrix4.fromRotationTranslation(mx);
+      const rotationY = Cesium.Matrix4.fromRotationTranslation(my);
+      const rotationZ = Cesium.Matrix4.fromRotationTranslation(mz);
+      // 平移 修改经纬度
+      const position = Cesium.Cartesian3.fromDegrees(ps.lng, ps.lat, ps.alt);
+      const m = Cesium.Transforms.eastNorthUpToFixedFrame(position);
+      // 旋转、平移矩阵相乘
+      Cesium.Matrix4.multiply(m, rotationX, m);
+      Cesium.Matrix4.multiply(m, rotationY, m);
+      Cesium.Matrix4.multiply(m, rotationZ, m);
+      // 缩放 修改缩放比例
+      // var scale = Cesium.Matrix4.fromUniformScale(this.tileModelTool.scale);
+      // Cesium.Matrix4.multiply(m, scale, m);
+      // 赋值给tileset
+      return m;
     },
   },
 };
